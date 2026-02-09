@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>VR Mini Game "Ball Collection" - Осипов Станислав</title>
+    <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+    <script src="https://unpkg.com/aframe-event-set-component@^4.2.1/dist/aframe-event-set-component.min.js"></script>
+</head>
+<body>
+    <a-scene cursor="rayOrigin: mouse">
+        
+        <a-sky src="sky.jpg"></a-sky>
+        
+        <!-- 2. ПОЛ -->
+        <a-plane 
+            position="0 0 0" 
+            rotation="-90 0 0" 
+            width="20" 
+            height="20" 
+            color="#7CFC00">
+        </a-plane>
+        
+        <!-- 3. КАМЕРА ИГРОКА -->
+        <a-entity 
+            camera 
+            look-controls 
+            wasd-controls 
+            position="0 1.6 5">
+            <a-cursor></a-cursor>
+        </a-entity>
+        
+        <!-- 4. ЗАГРУЗКА 3D-МОДЕЛИ -->
+        <!-- ПОМЕСТИТЕ ФАЙЛ model.glb В ПАПКУ С ПРОЕКТОМ -->
+        <a-assets>
+            <a-asset-item id="ball-model" src="model.glb"></a-asset-item>
+        </a-assets>
+        
+        <!-- 5. ОБЪЕКТЫ ДЛЯ СБОРА (ваши 3D мячики) -->
+        <!-- Модель 1 -->
+        <a-entity 
+            id="ball1"
+            class="collectible"
+            position="-3 1 -5"
+            scale="0.5 0.5 0.5"
+            gltf-model="#ball-model"
+            animation="property: rotation; to: 0 360 0; loop: true; dur: 3000">
+        </a-entity>
+        
+        <!-- Модель 2 -->
+        <a-entity 
+            id="ball2"
+            class="collectible"
+            position="0 1 -8"
+            scale="0.5 0.5 0.5"
+            gltf-model="#ball-model"
+            animation="property: rotation; to: 0 360 0; loop: true; dur: 3000">
+        </a-entity>
+        
+        <!-- Модель 3 -->
+        <a-entity 
+            id="ball3"
+            class="collectible"
+            position="3 1 -5"
+            scale="0.5 0.5 0.5"
+            gltf-model="#ball-model"
+            animation="property: rotation; to: 0 360 0; loop: true; dur: 3000">
+        </a-entity>
+        
+        <!-- 6. ИНТЕРФЕЙС: Счёт -->
+        <a-text 
+            id="score" 
+            value="Score: 0" 
+            position="-5.5 2 -2" 
+            color="#FFF" 
+            scale="2 2 2"
+            font="https://cdn.aframe.io/fonts/Roboto-msdf.json">
+        </a-text>
+        
+        <!-- 7. ИНТЕРФЕЙС: Таймер -->
+        <a-text 
+            id="timer" 
+            value="Time: 60" 
+            position="3.5 2 -2" 
+            color="#FFF" 
+            scale="2 2 2"
+            font="https://cdn.aframe.io/fonts/Roboto-msdf.json">
+        </a-text>
+        
+        <!-- 8. ИНТЕРФЕЙС: Сообщение о конце игры -->
+        <a-text 
+            id="message" 
+            value="" 
+            position="0 3.5 -2" 
+            color="#FFF" 
+            scale="2.5 2.5 2.5"
+            visible="false"
+            font="https://cdn.aframe.io/fonts/Roboto-msdf.json"
+            align="center"
+            width="6">
+        </a-text>
+        
+        <a-text 
+            value="THE GAME"
+            position="0 6.5 -2"
+            color="#FFF"
+            scale="1.5 1.5 1.5"
+            font="https://cdn.aframe.io/fonts/Roboto-msdf.json"
+            align="center">
+        </a-text>
+    </a-scene>
+    
+    <script>
+        // Game variables
+        let score = 0;
+        let timeLeft = 60;
+        let gameActive = true;
+        const totalObjects = 3;
+        
+        // UI elements
+        const scoreText = document.getElementById('score');
+        const timerText = document.getElementById('timer');
+        const messageText = document.getElementById('message');
+        
+        // Array for collected objects
+        const collectedObjects = [];
+        
+        // Function to collect an object
+        function collectObject(objId) {
+            if (!gameActive || collectedObjects.includes(objId)) return;
+            
+            collectedObjects.push(objId);
+            
+            const obj = document.getElementById(objId);
+            if (obj) {
+                // Делаем объект невидимым вместо удаления
+                obj.setAttribute('visible', 'false');
+                obj.classList.remove('collectible');
+                
+                // Можно также добавить эффект исчезновения
+                obj.setAttribute('animation', 'property: scale; to: 0 0 0; dur: 300');
+            }
+            
+            score++;
+            scoreText.setAttribute('value', `Score: ${score}`);
+            
+            checkWin();
+        }
+        
+        // Add click handlers to ALL collectible objects
+        function setupClickHandlers() {
+            document.querySelectorAll('.collectible').forEach(obj => {
+                obj.addEventListener('click', function() {
+                    collectObject(this.id);
+                });
+            });
+        }
+        
+        // Timer
+        const timer = setInterval(() => {
+            if (!gameActive) return;
+            
+            timeLeft--;
+            timerText.setAttribute('value', `Time: ${timeLeft}`);
+            
+            if (timeLeft <= 0) {
+                endGame(false);
+            }
+        }, 1000);
+        
+        // Check win condition
+        function checkWin() {
+            if (collectedObjects.length === totalObjects) {
+                endGame(true);
+            }
+        }
+        
+        // End game function
+        function endGame(isWin) {
+            gameActive = false;
+            clearInterval(timer);
+            
+            let msg;
+            let color;
+            
+            if (isWin) {
+                msg = `VICTORY!\nAll balls collected!\nFinal score: ${score}\nTime left: ${timeLeft} sec`;
+                color = '#0F0'; // Green
+            } else {
+                msg = `TIME'S UP!\nCollected: ${score}/${totalObjects}\nFinal score: ${score}`;
+                color = '#F00'; // Red
+            }
+            
+            messageText.setAttribute('value', msg);
+            messageText.setAttribute('color', color);
+            messageText.setAttribute('visible', 'true');
+            
+            // Add restart button
+            addRestartButton();
+        }
+        
+        // Restart button
+        function addRestartButton() {
+            const button = document.createElement('a-box');
+            button.setAttribute('position', '0 0.5 -1.5');
+            button.setAttribute('width', '2');
+            button.setAttribute('height', '0.7');
+            button.setAttribute('depth', '0.2');
+            button.setAttribute('color', '#4CAF50');
+            button.setAttribute('class', 'clickable');
+            
+            const text = document.createElement('a-text');
+            text.setAttribute('value', 'PLAY AGAIN');
+            text.setAttribute('position', '0 0 0.11');
+            text.setAttribute('align', 'center');
+            text.setAttribute('color', '#FFF');
+            text.setAttribute('font', 'https://cdn.aframe.io/fonts/Roboto-msdf.json');
+            
+            button.appendChild(text);
+            document.querySelector('a-scene').appendChild(button);
+            
+            // Click handler
+            button.addEventListener('click', function() {
+                location.reload();
+            });
+        }
+        
+        // Initialize click handlers when scene loads
+        document.querySelector('a-scene').addEventListener('loaded', function() {
+            setTimeout(setupClickHandlers, 1000); // Ждём загрузки моделей
+            console.log('Game loaded. Click on balls to collect them!');
+        });
+    </script>
+</body>
+</html>
