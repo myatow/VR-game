@@ -2,232 +2,526 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>VR Mini Game "Ball Collection" - Осипов Станислав</title>
+    <title>VR Ball Collection Game - Осипов Станислав</title>
     <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
-    <script src="https://unpkg.com/aframe-event-set-component@^4.2.1/dist/aframe-event-set-component.min.js"></script>
+    <script src="https://unpkg.com/aframe-particle-system-component@1.3.x/dist/aframe-particle-system-component.min.js"></script>
 </head>
 <body>
     <a-scene cursor="rayOrigin: mouse">
-        
+        <!-- BACKGROUND -->
         <a-sky src="sky.jpg"></a-sky>
         
-        <!-- 2. ПОЛ -->
+        <!-- FLOOR -->
         <a-plane 
             position="0 0 0" 
             rotation="-90 0 0" 
-            width="20" 
-            height="20" 
+            width="30" 
+            height="30" 
             color="#7CFC00">
         </a-plane>
         
-        <!-- 3. КАМЕРА ИГРОКА -->
+        <!-- LIGHTING -->
+        <a-light type="ambient" color="#445"></a-light>
+        <a-light type="directional" color="#FFF" intensity="0.8" position="-1 5 3"></a-light>
+        
+        <!-- CAMERA -->
         <a-entity 
-            camera 
+            camera="fov: 80"
             look-controls 
             wasd-controls 
             position="0 1.6 5">
-            <a-cursor></a-cursor>
         </a-entity>
         
-        <!-- 4. ЗАГРУЗКА 3D-МОДЕЛИ -->
-        <!-- ПОМЕСТИТЕ ФАЙЛ model.glb В ПАПКУ С ПРОЕКТОМ -->
+        <!-- ASSETS -->
         <a-assets>
+            <!-- BALL MODEL -->
             <a-asset-item id="ball-model" src="model.glb"></a-asset-item>
+            <!-- COLLECT SOUND EFFECT -->
+            <audio id="collect-sound" src="sound.mp3" preload="auto"></audio>
         </a-assets>
         
-        <!-- 5. ОБЪЕКТЫ ДЛЯ СБОРА (ваши 3D мячики) -->
-        <!-- Модель 1 -->
-        <a-entity 
-            id="ball1"
-            class="collectible"
-            position="-3 1 -5"
-            scale="0.5 0.5 0.5"
-            gltf-model="#ball-model"
-            animation="property: rotation; to: 0 360 0; loop: true; dur: 3000">
+        <a-sound id="collectSound" src="#collect-sound" autoplay="false"></a-sound>
+        <!-- MOVING OBJECTS CONTAINER -->
+        <a-entity id="moving-objects-container">
+            <!-- 1. RED CONE -->
+            <a-entity id="movingCone" 
+                      geometry="primitive: cone; radiusBottom: 0.4; height: 0.8"
+                      material="color: #FF0000"
+                      position="-6 1.5 -6"
+                      class="collectible"
+                      animation="property: position; 
+                               to: -6 3 -6; 
+                               dur: 1500; 
+                               loop: true; 
+                               dir: alternate;
+                               easing: easeInOutSine">
+            </a-entity>
+            
+            <!-- 2. BLUE BOX -->
+            <a-entity id="movingBox" 
+                      geometry="primitive: box; width: 0.7; height: 0.7; depth: 0.7"
+                      material="color: #0066FF"
+                      position="0 1.5 -12"
+                      class="collectible"
+                      animation="property: position; 
+                               to: 5 1.5 -12; 
+                               dur: 2500; 
+                               loop: true; 
+                               dir: alternate;
+                               easing: easeInOutSine">
+            </a-entity>
+            
+            <!-- 3. GREEN SPHERE -->
+            <a-entity id="movingSphere" 
+                      geometry="primitive: sphere; radius: 0.5"
+                      material="color: #00CC00"
+                      position="6 1.5 -8"
+                      class="collectible"
+                      animation="property: position; 
+                               to: 6 1.5 -15; 
+                               dur: 2000; 
+                               loop: true; 
+                               dir: alternate;
+                               easing: easeInOutQuad">
+            </a-entity>
+            
+            <!-- 4. YELLOW TORUS -->
+            <a-entity id="movingTorus" 
+                      geometry="primitive: torus; radius: 0.4; radiusTubular: 0.1"
+                      material="color: #FFFF00"
+                      position="-5 1.5 -15"
+                      class="collectible"
+                      animation="property: rotation; 
+                               to: 0 360 0; 
+                               dur: 3000; 
+                               loop: true;
+                               easing: linear">
+            </a-entity>
+            
+            <!-- 5. PURPLE CYLINDER -->
+            <a-entity id="movingCylinder" 
+                      geometry="primitive: cylinder; radius: 0.3; height: 0.8"
+                      material="color: #9900FF"
+                      position="7 1.5 -4"
+                      class="collectible"
+                      animation="property: position; 
+                               to: -2 1.5 -4; 
+                               dur: 3500; 
+                               loop: true; 
+                               dir: alternate;
+                               easing: easeInOutSine">
+            </a-entity>
         </a-entity>
         
-        <!-- Модель 2 -->
-        <a-entity 
-            id="ball2"
-            class="collectible"
-            position="0 1 -8"
-            scale="0.5 0.5 0.5"
-            gltf-model="#ball-model"
-            animation="property: rotation; to: 0 360 0; loop: true; dur: 3000">
-        </a-entity>
+        <!-- REGULAR BALLS CONTAINER -->
+        <a-entity id="balls-container"></a-entity>
         
-        <!-- Модель 3 -->
-        <a-entity 
-            id="ball3"
-            class="collectible"
-            position="3 1 -5"
-            scale="0.5 0.5 0.5"
-            gltf-model="#ball-model"
-            animation="property: rotation; to: 0 360 0; loop: true; dur: 3000">
-        </a-entity>
+        <!-- UI -->
+        <a-text id="score" value="Score: 0" position="-5.5 2.5 -2" color="#FFF" scale="1.8 1.8 1.8"></a-text>
+        <a-text id="timer" value="Time: 90" position="3.5 2.5 -2" color="#FFF" scale="1.8 1.8 1.8"></a-text>
+        <a-text id="message" value="" position="0 3.8 -2" color="#FFF" scale="2 2 2" visible="false" align="center" width="8"></a-text>
         
-        <!-- 6. ИНТЕРФЕЙС: Счёт -->
-        <a-text 
-            id="score" 
-            value="Score: 0" 
-            position="-5.5 2 -2" 
-            color="#FFF" 
-            scale="2 2 2"
-            font="https://cdn.aframe.io/fonts/Roboto-msdf.json">
-        </a-text>
+        <!-- PROGRESS COUNTERS -->
+        <a-text id="balls-counter" value="Balls: 0/5" position="-5.8 2 -2" color="#FFD700" scale="1.5 1.5 1.5"></a-text>
+        <a-text id="moving-counter" value="Special: 0/5" position="3.8 2 -2" color="#00FFFF" scale="1.5 1.5 1.5"></a-text>
         
-        <!-- 7. ИНТЕРФЕЙС: Таймер -->
-        <a-text 
-            id="timer" 
-            value="Time: 60" 
-            position="3.5 2 -2" 
-            color="#FFF" 
-            scale="2 2 2"
-            font="https://cdn.aframe.io/fonts/Roboto-msdf.json">
-        </a-text>
-        
-        <!-- 8. ИНТЕРФЕЙС: Сообщение о конце игры -->
-        <a-text 
-            id="message" 
-            value="" 
-            position="0 3.5 -2" 
-            color="#FFF" 
-            scale="2.5 2.5 2.5"
-            visible="false"
-            font="https://cdn.aframe.io/fonts/Roboto-msdf.json"
-            align="center"
-            width="6">
-        </a-text>
-        
-        <a-text 
-            value="THE GAME"
-            position="0 6.5 -2"
-            color="#FFF"
-            scale="1.5 1.5 1.5"
-            font="https://cdn.aframe.io/fonts/Roboto-msdf.json"
-            align="center">
-        </a-text>
     </a-scene>
     
     <script>
         // Game variables
         let score = 0;
-        let timeLeft = 60;
+        let timeLeft = 90;
         let gameActive = true;
-        const totalObjects = 3;
+        const totalRegularBalls = 5;
+        const totalMovingObjects = 5;
+        let gameTimer = null;
         
         // UI elements
         const scoreText = document.getElementById('score');
         const timerText = document.getElementById('timer');
         const messageText = document.getElementById('message');
+        const ballsCounter = document.getElementById('balls-counter');
+        const movingCounter = document.getElementById('moving-counter');
+        const ballsContainer = document.getElementById('balls-container');
+        const movingContainer = document.getElementById('moving-objects-container');
         
-        // Array for collected objects
-        const collectedObjects = [];
+        // Game state
+        let collectedRegularBalls = [];
+        let collectedMovingObjects = [];
+        let allCollectibles = [];
         
-        // Function to collect an object
-        function collectObject(objId) {
-            if (!gameActive || collectedObjects.includes(objId)) return;
+        // GENERATE RANDOM POSITIONS FOR REGULAR BALLS
+        function generateBallPositions(count) {
+            const positions = [];
+            for (let i = 0; i < count; i++) {
+                positions.push({
+                    x: Math.random() * 12 - 6,
+                    y: 1,
+                    z: Math.random() * 10 - 15
+                });
+            }
+            return positions;
+        }
+        
+        // CREATE REGULAR BALLS
+        function createRegularBalls() {
+            ballsContainer.innerHTML = '';
+            collectedRegularBalls = [];
             
-            collectedObjects.push(objId);
+            const positions = generateBallPositions(totalRegularBalls);
             
-            const obj = document.getElementById(objId);
-            if (obj) {
-                // Делаем объект невидимым вместо удаления
-                obj.setAttribute('visible', 'false');
-                obj.classList.remove('collectible');
+            positions.forEach((pos, index) => {
+                const ballId = `ball${index}`;
                 
-                // Можно также добавить эффект исчезновения
-                obj.setAttribute('animation', 'property: scale; to: 0 0 0; dur: 300');
+                // Create ball
+                const ball = document.createElement('a-entity');
+                ball.setAttribute('id', ballId);
+                ball.setAttribute('class', 'collectible ball');
+                ball.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
+                ball.setAttribute('scale', '0.4 0.4 0.4');
+                
+                // Add 3D model
+                const model = document.createElement('a-entity');
+                model.setAttribute('gltf-model', '#ball-model');
+                model.setAttribute('animation', 'property: rotation; to: 0 360 0; loop: true; dur: 3000');
+                ball.appendChild(model);
+                
+                // Store data
+                ball.userData = {
+                    type: 'regular',
+                    collected: false,
+                    value: 10
+                };
+                
+                // Add click handler
+                ball.addEventListener('click', function(event) {
+                    event.stopPropagation();
+                    if (!gameActive || this.userData.collected) return;
+                    collectObject(this);
+                });
+                
+                // Add to scene
+                ballsContainer.appendChild(ball);
+                allCollectibles.push(ball);
+            });
+            
+            updateCounters();
+        }
+        
+        // SETUP MOVING OBJECTS
+        function setupMovingObjects() {
+            collectedMovingObjects = [];
+            
+            // Get all moving objects
+            const movingObjects = movingContainer.querySelectorAll('.collectible');
+            
+            movingObjects.forEach(obj => {
+                obj.userData = {
+                    type: 'moving',
+                    collected: false,
+                    value: 25
+                };
+                
+                // Store original animation
+                if (obj.hasAttribute('animation')) {
+                    obj.userData.originalAnimation = obj.getAttribute('animation');
+                }
+                
+                // Add click handler
+                obj.addEventListener('click', function(event) {
+                    event.stopPropagation();
+                    if (!gameActive || this.userData.collected) return;
+                    collectObject(this);
+                });
+                
+                allCollectibles.push(obj);
+            });
+            
+            updateCounters();
+        }
+        
+        // COLLECT ANY OBJECT
+        function collectObject(obj) {
+            if (!gameActive || obj.userData.collected) return;
+            
+            const objId = obj.id;
+            const isRegular = obj.userData.type === 'regular';
+            
+            console.log('Collecting:', objId, isRegular ? '(regular)' : '(moving)');
+            
+            // Mark as collected
+            obj.userData.collected = true;
+            
+            if (isRegular) {
+                collectedRegularBalls.push(objId);
+            } else {
+                collectedMovingObjects.push(objId);
             }
             
-            score++;
-            scoreText.setAttribute('value', `Score: ${score}`);
+            // Get position
+            const pos = obj.getAttribute('position');
             
+            // 1. Disappear animation
+            obj.setAttribute('animation__collect', `
+                property: scale; 
+                to: 0.01 0.01 0.01; 
+                dur: 300; 
+                easing: easeInBack
+            `);
+            
+            // 2. Explosion effect
+            createExplosion(pos.x, pos.y, pos.z, isRegular ? '#FFD700' : getObjectColor(objId));
+
+            // 2.5. PLAY SOUND - ДОБАВЬ ЭТУ СТРОЧКУ
+            playCollectSound();
+            
+            // 3. Update score
+            score += obj.userData.value;
+            
+            // Update UI
+            updateUI();
+            
+            // Hide after animation
+            setTimeout(() => {
+                obj.setAttribute('visible', 'false');
+            }, 300);
+            
+            // Check win
             checkWin();
         }
         
-        // Add click handlers to ALL collectible objects
-        function setupClickHandlers() {
-            document.querySelectorAll('.collectible').forEach(obj => {
-                obj.addEventListener('click', function() {
-                    collectObject(this.id);
+        // GET COLOR FOR MOVING OBJECT
+        function getObjectColor(objId) {
+            switch(objId) {
+                case 'movingCone': return '#FF0000';
+                case 'movingBox': return '#0066FF';
+                case 'movingSphere': return '#00CC00';
+                case 'movingTorus': return '#FFFF00';
+                case 'movingCylinder': return '#9900FF';
+                default: return '#FFFFFF';
+            }
+        }
+        // CREATE SOUND EFFECT
+        function playCollectSound() {
+            const sound = document.getElementById('collectSound');
+
+            // HTML5 Audio
+            const audio = document.getElementById('collect-sound');
+            if (audio) {
+                audio.currentTime = 0; // Перемотка в начало ВСЕГДА
+                audio.play().catch(e => {
+                    // Если браузер блокирует автовоспроизведение, игнорируем ошибку
+                    console.log('Audio play failed (can be ignored):', e);
                 });
+            }
+        }       
+        // CREATE EXPLOSION EFFECT
+        function createExplosion(x, y, z, color = '#FFFFFF') {
+            const explosion = document.createElement('a-entity');
+            explosion.setAttribute('position', `${x} ${y} ${z}`);
+            explosion.setAttribute('particle-system', {
+                preset: 'default',
+                color: color,
+                size: 0.3,
+                velocityValue: {x: 2, y: 3, z: 2},
+                particleCount: 20,
+                duration: 500
             });
+            explosion.setAttribute('id', `explosion-${Date.now()}`);
+            
+            document.querySelector('a-scene').appendChild(explosion);
+            
+            setTimeout(() => {
+                if (explosion.parentNode) {
+                    explosion.parentNode.removeChild(explosion);
+                }
+            }, 1000);
         }
         
-        // Timer
-        const timer = setInterval(() => {
-            if (!gameActive) return;
-            
-            timeLeft--;
-            timerText.setAttribute('value', `Time: ${timeLeft}`);
-            
-            if (timeLeft <= 0) {
-                endGame(false);
-            }
-        }, 1000);
+        // UPDATE ALL UI
+        function updateUI() {
+            scoreText.setAttribute('value', `Score: ${score}`);
+            updateCounters();
+        }
         
-        // Check win condition
+        // UPDATE COUNTERS
+        function updateCounters() {
+            ballsCounter.setAttribute('value', `Balls: ${collectedRegularBalls.length}/${totalRegularBalls}`);
+            movingCounter.setAttribute('value', `Special: ${collectedMovingObjects.length}/${totalMovingObjects}`);
+        }
+        
+        // START TIMER
+        function startTimer() {
+            if (gameTimer) clearInterval(gameTimer);
+            
+            gameTimer = setInterval(() => {
+                if (!gameActive) {
+                    clearInterval(gameTimer);
+                    return;
+                }
+                
+                timeLeft--;
+                timerText.setAttribute('value', `Time: ${timeLeft}`);
+                
+                if (timeLeft <= 0) {
+                    endGame(false);
+                }
+            }, 1000);
+        }
+        
+        // CHECK WIN CONDITION
         function checkWin() {
-            if (collectedObjects.length === totalObjects) {
-                endGame(true);
+            const allRegularCollected = collectedRegularBalls.length === totalRegularBalls;
+            const allMovingCollected = collectedMovingObjects.length === totalMovingObjects;
+            
+            if (allRegularCollected && allMovingCollected) {
+                setTimeout(() => endGame(true), 500);
             }
         }
         
-        // End game function
+        // END GAME
         function endGame(isWin) {
             gameActive = false;
-            clearInterval(timer);
+            clearInterval(gameTimer);
             
-            let msg;
-            let color;
-            
+            let msg, color;
             if (isWin) {
-                msg = `VICTORY!\nAll balls collected!\nFinal score: ${score}\nTime left: ${timeLeft} sec`;
-                color = '#0F0'; // Green
+                const timeBonus = Math.max(0, timeLeft * 5);
+                const totalScore = score + timeBonus;
+                msg = `VICTORY!\nAll objects collected!\nScore: ${score}\nTime bonus: +${timeBonus}\nTotal: ${totalScore}\nTime left: ${timeLeft}s`;
+                color = '#0F0';
             } else {
-                msg = `TIME'S UP!\nCollected: ${score}/${totalObjects}\nFinal score: ${score}`;
-                color = '#F00'; // Red
+                msg = `TIME'S UP!\nRegular balls: ${collectedRegularBalls.length}/${totalRegularBalls}\nSpecial objects: ${collectedMovingObjects.length}/${totalMovingObjects}\nFinal score: ${score}`;
+                color = '#F00';
             }
             
             messageText.setAttribute('value', msg);
             messageText.setAttribute('color', color);
             messageText.setAttribute('visible', 'true');
             
-            // Add restart button
             addRestartButton();
         }
         
-        // Restart button
+        // ADD RESTART BUTTON
         function addRestartButton() {
-            const button = document.createElement('a-box');
-            button.setAttribute('position', '0 0.5 -1.5');
-            button.setAttribute('width', '2');
-            button.setAttribute('height', '0.7');
-            button.setAttribute('depth', '0.2');
-            button.setAttribute('color', '#4CAF50');
-            button.setAttribute('class', 'clickable');
+            // Remove old button
+            const oldBtn = document.querySelector('#restart-btn');
+            if (oldBtn) oldBtn.parentNode.removeChild(oldBtn);
+            
+            const btn = document.createElement('a-entity');
+            btn.setAttribute('id', 'restart-btn');
+            btn.setAttribute('position', '0 0.8 -1.5');
+            btn.setAttribute('geometry', 'primitive: box; width: 2.5; height: 0.7; depth: 0.1');
+            btn.setAttribute('material', 'color: #4CAF50');
             
             const text = document.createElement('a-text');
             text.setAttribute('value', 'PLAY AGAIN');
-            text.setAttribute('position', '0 0 0.11');
+            text.setAttribute('position', '0 0 0.06');
             text.setAttribute('align', 'center');
             text.setAttribute('color', '#FFF');
-            text.setAttribute('font', 'https://cdn.aframe.io/fonts/Roboto-msdf.json');
+            text.setAttribute('scale', '1.5 1.5 1.5');
             
-            button.appendChild(text);
-            document.querySelector('a-scene').appendChild(button);
+            btn.appendChild(text);
+            document.querySelector('a-scene').appendChild(btn);
             
-            // Click handler
-            button.addEventListener('click', function() {
-                location.reload();
+            btn.addEventListener('click', restartGame);
+        }
+        
+        // RESET ALL MOVING OBJECTS
+        function resetMovingObjects() {
+            const movingObjects = [
+                'movingCone',
+                'movingBox', 
+                'movingSphere',
+                'movingTorus',
+                'movingCylinder'
+            ];
+            
+            movingObjects.forEach(objId => {
+                const obj = document.getElementById(objId);
+                if (obj) {
+                    // Reset visibility and scale
+                    obj.setAttribute('visible', 'true');
+                    obj.setAttribute('scale', '1 1 1');
+                    
+                    // Reset user data
+                    obj.userData.collected = false;
+                    
+                    // Remove collection animation
+                    obj.removeAttribute('animation__collect');
+                    
+                    // Restore original animation
+                    if (obj.userData.originalAnimation) {
+                        obj.setAttribute('animation', obj.userData.originalAnimation);
+                    }
+                }
             });
         }
         
-        // Initialize click handlers when scene loads
+        // RESTART GAME
+        function restartGame() {
+            console.log('Restarting game...');
+            
+            // Reset variables
+            score = 0;
+            timeLeft = 90;
+            gameActive = true;
+            collectedRegularBalls = [];
+            collectedMovingObjects = [];
+            allCollectibles = [];
+            
+            // Reset UI
+            scoreText.setAttribute('value', 'Score: 0');
+            timerText.setAttribute('value', 'Time: 90');
+            messageText.setAttribute('visible', 'false');
+            updateCounters();
+            
+            // Remove restart button
+            const btn = document.querySelector('#restart-btn');
+            if (btn) btn.parentNode.removeChild(btn);
+            
+            // Remove explosions
+            document.querySelectorAll('[id^="explosion-"]').forEach(e => {
+                if (e.parentNode) e.parentNode.removeChild(e);
+            });
+            
+            // Reset all collectibles
+            document.querySelectorAll('.collectible').forEach(obj => {
+                obj.setAttribute('visible', 'true');
+                obj.setAttribute('scale', obj.classList.contains('ball') ? '0.4 0.4 0.4' : '1 1 1');
+                obj.removeAttribute('animation__collect');
+            });
+            
+            // Create new regular balls
+            createRegularBalls();
+            
+            // Reset moving objects
+            resetMovingObjects();
+            setupMovingObjects();
+            
+            // Start timer
+            startTimer();
+            
+            console.log('Game restarted!');
+        }
+        
+        // INITIALIZE GAME
         document.querySelector('a-scene').addEventListener('loaded', function() {
-            setTimeout(setupClickHandlers, 1000); // Ждём загрузки моделей
-            console.log('Game loaded. Click on balls to collect them!');
+            console.log('Game initialization...');
+            
+            // Create regular balls
+            createRegularBalls();
+            
+            // Setup moving objects
+            setupMovingObjects();
+            
+            // Start timer
+            startTimer();
+            
+            // Debug info
+            console.log('Game ready! Click on objects to collect.');
+            console.log('Balls: 10 points each');
+            console.log('Special objects: 25 points each');
         });
     </script>
 </body>
